@@ -1,3 +1,7 @@
+conda init
+source activate
+conda activate diffusers
+
 CONFIG="./configs/mapillary-vistas/semantic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_300k.yaml"
 # CONFIG="/root/GenLane/Mask2Former/configs/mapillary-vistas/panoptic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_300k.yaml"
 CHECKPOINT="../../models/m2f_mapillary_semantic.pkl"
@@ -59,7 +63,7 @@ cleanlab(){
 inf_8() {
     local index=$1
     inf 0 $index
-    inf 2 $index
+    inf 1 $index
     inf 2 $index
     inf 3 $index
     inf 4 $index
@@ -70,7 +74,7 @@ inf_8() {
 
 
 
-for i in {0..1}
+for i in {0..49}
 do
     inf_8 $i
     wait
