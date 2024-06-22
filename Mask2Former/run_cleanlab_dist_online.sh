@@ -4,7 +4,7 @@ conda activate diffusers
 
 CONFIG="./configs/mapillary-vistas/semantic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_300k.yaml"
 # CONFIG="/root/GenLane/Mask2Former/configs/mapillary-vistas/panoptic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_300k.yaml"
-CHECKPOINT="../../models/m2f_mapillary_semantic.pkl"
+CHECKPOINT="/share/songyuhao/seg_cleanlab/models/m2f_mapillary_semantic.pkl"
 
 # INPUT_DIR="/mnt/ve_share/chenminghua/dataset/0528/*"
 # INPUT_FILE_LIST="/mnt/share_disk/songyuhao/seg_cleanlab/test/100.txt"
