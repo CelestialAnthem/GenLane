@@ -8,7 +8,7 @@ CHECKPOINT="/share/songyuhao/seg_cleanlab/models/m2f_mapillary_semantic.pkl"
 
 # INPUT_DIR="/mnt/ve_share/chenminghua/dataset/0528/*"
 # INPUT_FILE_LIST="/mnt/share_disk/songyuhao/seg_cleanlab/test/100.txt"
-SAVE_DIR="./output_x/"
+SAVE_DIR="/root/output_x/"
 
 echo $SAVE_DIR
 mkdir -p $SAVE_DIR
@@ -37,13 +37,11 @@ inf() {
                                                                 --opts MODEL.WEIGHTS ${CHECKPOINT} &
 }
 
-cleanlab(){
+cleanlab() {
     local index=$1
 
-    python ./tools/postprocess/combine.py $SAVE_DIR/pred/$index $SAVE_DIR/comb/$index pred
-    python ./tools/postprocess/combine.py $SAVE_DIR/res/$index $SAVE_DIR/comb/$index res
+    python ./tools/postprocess/combine.py $SAVE_DIR/pred/$index $SAVE_DIR/res/$index $SAVE_DIR/comb/$index
 
-    # Pair up pred and res files and run the cleanlab script for each pair
     for pred_file in $SAVE_DIR/comb/$index/pred*.npy; do
         file_name=$(basename -- "$pred_file")
         suffix="${file_name#pred_}"
@@ -72,16 +70,21 @@ inf_8() {
     inf 7 $index
 }
 
+# Set start and end indices for the loop
+start_index=${1:-0}  # Default value is 0
+end_index=${2:-49}   # Default value is 49
 
-
-for i in {0..49}
+for i in $(seq $start_index $end_index)
 do
     inf_8 $i
     wait
     cleanlab $i
-    cp -r ./output_x/clean_res/$i /share/songyuhao/seg_cleanlab/res
+    rm -rf $SAVE_DIR/pred/$i
+    rm -rf $SAVE_DIR/res/$i
+    rm -rf $SAVE_DIR/comb/$i
+    cp -r /root/output_x/clean_res/$i /share/songyuhao/seg_cleanlab/res
+    rm -rf $SAVE_DIR/clean_res/$i
 done
 
 # Wait for all background jobs to complete
 wait
-

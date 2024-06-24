@@ -1,67 +1,75 @@
 import os
 import sys
-import json
 import numpy as np
 from collections import defaultdict
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
-def combine_npy_files(folder_path, output_file_dir, output_file_prefix):
-    # List all npy files in the folder
-    npy_files = [f for f in os.listdir(folder_path) if f.endswith('.npy')]
+def load_npy_file(file_path):
+    return np.load(file_path)
+
+def process_files(npy_files_pred, npy_files_res, folder_path_pred, folder_path_res):
+    arrays_by_shape_pred = defaultdict(list)
+    arrays_by_shape_res = defaultdict(list)
     
-    # Dictionary to store lists of arrays by their shape
-    arrays_by_shape = defaultdict(list)
+    with ThreadPoolExecutor() as executor:
+        futures_pred = {executor.submit(load_npy_file, os.path.join(folder_path_pred, pred_file)): pred_file for pred_file in npy_files_pred}
+        futures_res = {executor.submit(load_npy_file, os.path.join(folder_path_res, res_file)): res_file for res_file in npy_files_res}
+        
+        for future in tqdm(futures_pred, total=len(futures_pred), desc="Loading pred npy files"):
+            pred_file = futures_pred[future]
+            pred_array = future.result()
+            arrays_by_shape_pred[pred_array.shape].append(pred_array)
+        
+        for future in tqdm(futures_res, total=len(futures_res), desc="Loading res npy files"):
+            res_file = futures_res[future]
+            res_array = future.result()
+            arrays_by_shape_res[res_array.shape].append(res_array)
     
-    # Dictionary to store the mapping of combined files
-    combine_mapping = defaultdict(list)
-    
-    # Load each npy file and append to the corresponding shape list
-    for npy_file in tqdm(npy_files, desc="Loading npy files"):
-        file_path = os.path.join(folder_path, npy_file)
-        array = np.load(file_path)
-        arrays_by_shape[array.shape].append((npy_file, array))
-    
-    # Process each shape group
+    return arrays_by_shape_pred, arrays_by_shape_res
+
+def save_combined_arrays(arrays_by_shape, file_type, output_file_dir):
     for shape, arrays in arrays_by_shape.items():
-        # Add a new axis to each array before concatenation
-        expanded_arrays = [array[np.newaxis, ...] for _, array in arrays]
-        combined_array = np.concatenate(expanded_arrays, axis=0)
-        
-        shape_str = '_'.join(map(str, shape)) 
-        shape_str = shape_str if len(shape_str.split("_")) == 2 else '_'.join(shape_str.split("_")[1:])
-        output_file = f"{output_file_prefix}_{shape_str}.npy"
+        combined_array = np.concatenate([array[np.newaxis, ...] for array in arrays], axis=0)
+        shape_str = '_'.join(map(str, shape))
+        if file_type == "pred":
+            tmp_shape_str = "_".join(shape_str.split("_")[1:])
+            output_file = f"{file_type}_{tmp_shape_str}.npy"
+        else:
+            output_file = f"{file_type}_{shape_str}.npy"
         output_file_path = os.path.join(output_file_dir, output_file)
-        
-        # Save the combined array to a new npy file
         np.save(output_file_path, combined_array)
-        
-        # Record the mapping
-        combine_mapping[output_file] = [npy_file for npy_file, _ in arrays]
-        print(combine_mapping)
-        
-        # Remove the original npy files
-        for npy_file, _ in tqdm(arrays, desc=f"Removing files for shape {shape_str}"):
-            file_path = os.path.join(folder_path, npy_file)
-            print(file_path)
-            if file_path.endswith(".npy"):
-                os.remove(file_path)
-        
-        print(f"Combined array of shape {shape} saved to {output_file_path}")
-        print(f"Removed {len(arrays)} original npy files")
+        print(f"Combined {file_type} array of shape {shape} saved to {output_file_path}")
+
+def combine_npy_files(folder_path_pred, folder_path_res, output_file_dir):
+    # List all npy files in the folders
+    npy_files_pred = sorted([f for f in os.listdir(folder_path_pred) if f.endswith('.npy')])
+    npy_files_res = sorted([f for f in os.listdir(folder_path_res) if f.endswith('.npy')])
     
-    # Save the mapping to a JSON file
-    # mapping_file_path = os.path.join(folder_path, f"{output_file_prefix}_combine_mapping.json")
-    # with open(mapping_file_path, 'w') as mapping_file:
-    #     json.dump(combine_mapping, mapping_file, indent=4)
+    # Check if the number of files matches
+    if len(npy_files_pred) != len(npy_files_res):
+        print("The number of pred and res files do not match!")
+        return
     
-    # print(f"Combine mapping saved to {mapping_file_path}")
+    # Ensure that files are correctly paired
+    for pred_file, res_file in zip(npy_files_pred, npy_files_res):
+        pred_prefix = os.path.splitext(pred_file)[0].rsplit('_', 1)[0]
+        res_prefix = os.path.splitext(res_file)[0].rsplit('_', 1)[0]
+        if pred_prefix != res_prefix:
+            print(f"Mismatched file pairs: {pred_file} and {res_file}")
+            return
+    
+    arrays_by_shape_pred, arrays_by_shape_res = process_files(npy_files_pred, npy_files_res, folder_path_pred, folder_path_res)
+    
+    save_combined_arrays(arrays_by_shape_pred, 'pred', output_file_dir)
+    save_combined_arrays(arrays_by_shape_res, 'res', output_file_dir)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Usage: python combine_npy.py <folder_path> <output_file_prefix>")
+        print("Usage: python combine_npy.py <folder_path_pred> <folder_path_res> <output_file_dir>")
         sys.exit(1)
     
-    folder_path = sys.argv[1]
-    output_file_dir = sys.argv[2]
-    output_file_prefix = sys.argv[3]
-    combine_npy_files(folder_path, output_file_dir, output_file_prefix)
+    folder_path_pred = sys.argv[1]
+    folder_path_res = sys.argv[2]
+    output_file_dir = sys.argv[3]
+    combine_npy_files(folder_path_pred, folder_path_res, output_file_dir)

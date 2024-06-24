@@ -118,7 +118,7 @@ def merge_dicts(dict1, dict2):
     return dict1
 
 if __name__ == "__main__":
-    PURE = True
+    PURE = False
     mp.set_start_method("spawn", force=True)
     args = get_parser().parse_args()
     setup_logger(name="fvcore")
