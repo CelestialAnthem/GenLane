@@ -113,16 +113,20 @@ if __name__ == "__main__":
                 with open(args.input[0],'r') as f:
                     lines = f.readlines()
                 args.input = [line.strip() for line in lines]
-                # with open(args.input,'r') as f:
-                #     jsons = f.readlines()
-                # args.input = []
-                # for j in jsons:
-                #     with open(j.strip(),'r') as f:
-                #         json_info = json.load(f)
-                #     img_info = json_info['camera']
-                #     for view in img_info:
-                #         if view['name'] == 'front_middle_camera':
-                #             args.input.append(view['oss_path'])
+            elif 'hds' in args.input[0]:
+                with open(args.input,'r') as f:
+                    jsons = f.readlines()
+                args.input = []
+                for j in jsons:
+                    j = j if j.startswith("/") else "/" + j
+                    with open(j.strip(),'r') as f:
+                        json_info = json.load(f)
+                    img_info = json_info['camera']
+                    for view in img_info:
+                        if view['name'] == 'front_long_camera_record':
+                            path = view['oss_path']
+                            path = path if path.startswith("/") else "/" + path
+                            args.input.append(path)
             elif '.' not in args.input[0]:
                 p_list = os.listdir(args.input[0])
                 input_imgs = [os.path.join(args.input[0],p) for p in p_list]

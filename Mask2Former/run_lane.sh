@@ -3,8 +3,8 @@ CONFIG="/root/GenLane/Mask2Former/configs/mapillary-vistas/semantic-segmentation
 CHECKPOINT="/mnt/share_disk/LIV/generation_group/models/diffusers/public/m2f_mapillary_semantic.pkl"
 
 # INPUT_DIR="/mnt/ve_share/chenminghua/dataset/0528/*"
-INPUT_DIR="/root/GenLane/test_10.txt"
-SAVE_DIR="/root/GenLane/output"
+INPUT_DIR="/mnt/ve_share/songyuhao/dm_test.txt"
+SAVE_DIR="/root/GenLane/dm"
 
 echo $SAVE_DIR
 mkdir $SAVE_DIR
